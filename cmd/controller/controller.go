@@ -5,7 +5,7 @@ import (
 "fmt"
 "os"
 
-"github.com/nuclio/nuclio/cmd/processor/app"
+"github.com/nuclio/nuclio/cmd/controller/app"
 )
 
 func run() error {
