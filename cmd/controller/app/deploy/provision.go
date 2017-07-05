@@ -7,7 +7,6 @@ import (
 	autos_v1 "k8s.io/client-go/pkg/apis/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/pkg/apis/apps/v1beta1"
-	"fmt"
 	"github.com/nuclio/nuclio/pkg/util/common"
 	"github.com/nuclio/nuclio/pkg/kubecr"
 )
@@ -224,23 +223,3 @@ func DeleteFunc(cl *kubernetes.Clientset, namespace, name string) error {
 
 	return nil
 }
-
-// Init Function State Cache
-func InitFlist(cl *kubernetes.Clientset, scache *FuncCache) (error) {
-	opts := meta_v1.ListOptions{
-		LabelSelector: "serverless="+SERVERLESS_LABEL,
-	}
-	deps, err := cl.AppsV1beta1().Deployments("").List(opts)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("deps: %s \n",deps)
-
-	for _,dep := range deps.Items {
-		gen   := dep.Annotations["func_gen"]
-		line  := FunctionStateRec{LastGen:gen, Alias:dep.Labels["alias"]}
-		scache.Set(dep.Namespace,dep.Name,line)
-	}
-	return nil
-}
-

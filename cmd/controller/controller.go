@@ -9,15 +9,15 @@ import (
 )
 
 func run() error {
-	configPath := flag.String("config", "", "Path of configuration file")
+	configPath := flag.String("config", "c:/Users/yaron/Documents/admin.conf", "Path of configuration file")
 	flag.Parse()
 
-	processor, err := app.NewProcessor(*configPath)
+	controller, err := app.NewController(*configPath)
 	if err != nil {
 		return err
 	}
 
-	return processor.Start()
+	return controller.Start()
 }
 
 func main() {

@@ -25,10 +25,6 @@ const (
 	FunctionStateProcessed  FunctionState = "processed"
 	FunctionStateError      FunctionState = "error"
 	FunctionStateDisabled   FunctionState = "disabled"
-	FunctionStateBuild      FunctionState = "build"
-	FunctionStateReady      FunctionState = "ready"
-	FunctionStateDeploy     FunctionState = "deploy"
-	FunctionStateRunning    FunctionState = "running"
 	FunctionStateTerminate  FunctionState = "terminate"
 )
 

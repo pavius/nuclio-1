@@ -5,7 +5,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
-	//"k8s.io/client-go/pkg/api"
+	"k8s.io/client-go/tools/clientcmd"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1b1e "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	"k8s.io/client-go/pkg/api/v1"
@@ -65,7 +65,7 @@ var SchemeGroupVersion = schema.GroupVersion{Group: TPRGroup, Version: TPRVersio
 
 func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
-	SchemeBuilder := runtime.NewSchemeBuilder(FuncTPR.KnownType, TrigTPR.KnownType)
+	SchemeBuilder := runtime.NewSchemeBuilder(FuncTPR.KnownType)
 	if err := SchemeBuilder.AddToScheme(scheme); err != nil {
 		return nil, nil, err
 	}
@@ -80,4 +80,34 @@ func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 		return nil, nil, err
 	}
 	return client, scheme, nil
+}
+
+
+func GetClientConfig(kubeconfig string) (*rest.Config, error) {
+	if kubeconfig != "" {
+		return clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
+	return rest.InClusterConfig()
+}
+
+// Create TPR/CR if not already created, and custom Rest client
+func CreateFuncCR(config *rest.Config, cl *kubernetes.Clientset) (*rest.RESTClient, error) {
+
+	err := FuncTPR.Create(cl)
+	if err != nil {
+		return nil, err
+	}
+
+	tprcl, _, err := NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wait for TPR to be ready (if it was just created)
+	err = FuncTPR.WaitForResource(tprcl)
+	if err != nil {
+		return nil, err
+	}
+
+	return tprcl, nil
 }

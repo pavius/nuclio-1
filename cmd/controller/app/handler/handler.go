@@ -1,7 +1,7 @@
-package server
+package handler
 
 import (
-	"github.com/nuclio/utils/ctrl/deploy"
+	"github.com/nuclio/nuclio/cmd/controller/app/deploy"
 	"fmt"
 	"strings"
 	"k8s.io/client-go/kubernetes"
@@ -10,52 +10,40 @@ import (
 	"strconv"
 	"github.com/nuclio/nuclio/pkg/kubecr"
 	"github.com/nuclio/nuclio/pkg/util/common"
+	"github.com/nuclio/nuclio/pkg/logger"
 )
 
-func updateFunc(cl *rest.RESTClient, f *kubecr.Function, state kubecr.FunctionState, msg string) error {
-	f.Status.ObservedGen = f.ResourceVersion
-	f.Status.State = state
-	f.Status.Message = msg
 
-	common.LogDebug("Updating function status: %s %s (%s) \n",f.Namespace, f.Name, msg)
-	newf, err := kubecr.Functions(cl).Update(f)
-	if err != nil {
-		// TODO handle different err types, e.g. res ver conflict
-		return err
-	}
-	stateCache.SetGen(f.Namespace, f.Name, newf.ResourceVersion)
-	return nil
+
+
+type Handler struct {
+	logger       logger.Logger
+	cs           *kubernetes.Clientset
+	crcl         *rest.RESTClient
+	stateCache   *deploy.FuncCache
 }
 
-func createFunc(cl *rest.RESTClient, f *kubecr.Function, state kubecr.FunctionState, msg string) error {
-	f.Status.ObservedGen = "0"
-	f.Status.State = state
-	f.Status.Message = msg
+func NewHandler(cs *kubernetes.Clientset, crcl *rest.RESTClient, cache *deploy.FuncCache) (*Handler, error) {
 
-	common.LogDebug("Create new function: %s %s (%s) \n",f.Namespace, f.Name, msg)
-	newf, err := kubecr.Functions(cl).Create(f)
-	if err != nil {
-		// TODO handle different err types, e.g. already exist
-		return err
-	}
-	stateCache.SetGen(f.Namespace, f.Name, newf.ResourceVersion)
-	return nil
+	newHandler := Handler{ cs:cs, crcl:crcl, stateCache:cache }
+
+	return &newHandler, nil
 }
 
 
-func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, name, gen string) error {
+func (h *Handler) HandleFuncChange(namespace, name, gen string) error {
 
 	if namespace == "" {
 		return fmt.Errorf("ERROR null namespace with %s\n",name)
 	}
 
 	// TODO: change to IsNewerState
-	if !stateCache.DidStateChange(namespace, name, gen) {
+	if !h.stateCache.DidStateChange(namespace, name, gen) {
 		common.LogDebug("Add/Update with no change to: %s %s (%s) \n",namespace, name, gen)
 		return nil
 	}
 
-	fapi := kubecr.Functions(cl)
+	fapi := kubecr.Functions(h.crcl)
 	function, err := fapi.Get(namespace, name)
 	if err != nil {
 		common.LogDebug("Error with function get: %s %s (%s)\n",namespace, name, err)
@@ -63,7 +51,7 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 		return err
 	}
 	fname:=function.Name
-	common.LogDebug("HandleFuncChange-Get: %s %s (G %s , RV %s, C %s) \n",namespace, name, gen, function.ResourceVersion, stateCache.Get(namespace, name).LastGen)
+	common.LogDebug("HandleFuncChange-Get: %s %s (G %s , RV %s, C %s) \n",namespace, name, gen, function.ResourceVersion, h.stateCache.Get(namespace, name).LastGen)
 
 
 
@@ -85,7 +73,7 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 	//	"Error!, Cannot use Dot in a function name")
 
 	if function.Labels["function"] !="" && fname != function.Labels["function"] {
-		return updateFunc(cl, function, kubecr.FunctionStateError,
+		return h.updateFunc(function, kubecr.FunctionStateError,
 			"Error!, Name and function lable must be the same")
 	}
 	function.ObjectMeta.Labels["function"]=fname
@@ -94,12 +82,12 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 	// TODO: move all new ver tests to function, add test that image & code are noth both null etc.
 	// TODO: move all old ver tests to function, add test that image is not null etc.
 	if ver > 0 && function.Spec.Version != ver {
-		return updateFunc(cl, function, kubecr.FunctionStateError,
+		return h.updateFunc(function, kubecr.FunctionStateError,
 			"Error!, version number cannot be modified on published versions ")
 	}
 
 	if ver > 0 && function.Spec.Alias == "latest" {
-		return updateFunc(cl, function, kubecr.FunctionStateError,
+		return h.updateFunc(function, kubecr.FunctionStateError,
 			"Error!, Older versions cannot be tagged as 'latest' ")
 	}
 
@@ -110,7 +98,7 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 	}
 
 	if ver == 0 && function.Spec.Alias != "latest" && !function.Spec.Publish {
-		return updateFunc(cl, function, kubecr.FunctionStateError,
+		return h.updateFunc(function, kubecr.FunctionStateError,
 			"Error!, Head version must be tagged as 'latest' or use Publish flag")
 	}
 
@@ -123,7 +111,7 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 	if function.Spec.Image == "" || function.Spec.Disabled {
 
 		if function.Spec.Publish {
-			return updateFunc(cl, function, kubecr.FunctionStateError,
+			return h.updateFunc(function, kubecr.FunctionStateError,
 				"Error!, Can't Publish on build or disabled function")
 		}
 
@@ -134,13 +122,13 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 			function.Status.BuildState = kubecr.BuildStatePending
 			msg = "Build pending"
 		}
-		err = updateFunc(cl, function, kubecr.FunctionStateProcessed, msg)
+		err = h.updateFunc(function, kubecr.FunctionStateProcessed, msg)
 		if err != nil {
 			return err
 		}
-		stateCache.SetArgs(function)
+		h.stateCache.SetArgs(function)
 		if function.Spec.Disabled {
-			return deploy.DeleteFunc(cs, namespace, name)
+			return deploy.DeleteFunc(h.cs, namespace, name)
 		}
 
 		return nil
@@ -154,7 +142,7 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 		// TODO: if alias = "latest" clear it, check code above for no conflicts
 
 		if ver != 0 {
-			return updateFunc(cl, function, kubecr.FunctionStateError,
+			return h.updateFunc(function, kubecr.FunctionStateError,
 				"Error!, Cannot publish version other than latest")
 		}
 
@@ -162,7 +150,7 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 		function.Spec.Version += 1
 		function.Spec.Publish = false
 
-		err = updateFunc(cl, function, kubecr.FunctionStateProcessed, "")
+		err = h.updateFunc(function, kubecr.FunctionStateProcessed, "")
 		if err != nil {
 			return err
 		}
@@ -178,7 +166,7 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 			Labels: lbl,
 		}
 		function.Spec.Version = pubver
-		err = createFunc(cl, function, kubecr.FunctionStateProcessed, "")
+		err = h.createFunc(function, kubecr.FunctionStateProcessed, "")
 		if err != nil {
 			common.LogDebug("Failed to create new published version in %s %s - %s",namespace, name, err)
 			return err
@@ -191,14 +179,14 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 	}
 
 	common.Print_json(function)
-	err = updateFunc(cl, function, kubecr.FunctionStateProcessed, "")
+	err = h.updateFunc(function, kubecr.FunctionStateProcessed, "")
 	if err != nil {
 		return err
 	}
 	common.LogDebug("Updated Func S3")
 
 	// create or update
-	err = deploy.DeployFunction(cs, function)
+	err = deploy.DeployFunction(h.cs, function)
 	if err != nil {
 		return err
 	}
@@ -208,3 +196,35 @@ func HandleFuncChange(cl *rest.RESTClient, cs *kubernetes.Clientset, namespace, 
 
 	return nil
 }
+
+func (h *Handler) updateFunc(f *kubecr.Function, state kubecr.FunctionState, msg string) error {
+	f.Status.ObservedGen = f.ResourceVersion
+	f.Status.State = state
+	f.Status.Message = msg
+
+	common.LogDebug("Updating function status: %s %s (%s) \n",f.Namespace, f.Name, msg)
+	newf, err := kubecr.Functions(h.crcl).Update(f)
+	if err != nil {
+		// TODO handle different err types, e.g. res ver conflict
+		return err
+	}
+	h.stateCache.SetGen(f.Namespace, f.Name, newf.ResourceVersion)
+	return nil
+}
+
+func (h *Handler) createFunc(f *kubecr.Function, state kubecr.FunctionState, msg string) error {
+	f.Status.ObservedGen = "0"
+	f.Status.State = state
+	f.Status.Message = msg
+
+	common.LogDebug("Create new function: %s %s (%s) \n",f.Namespace, f.Name, msg)
+	newf, err := kubecr.Functions(h.crcl).Create(f)
+	if err != nil {
+		// TODO handle different err types, e.g. already exist
+		return err
+	}
+	h.stateCache.SetGen(f.Namespace, f.Name, newf.ResourceVersion)
+	return nil
+}
+
+
