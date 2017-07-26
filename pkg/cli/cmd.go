@@ -59,6 +59,7 @@ func NewNuclioCLI() *cobra.Command {
 	rootCmd.AddCommand(commands.NewCmdRun(&options),
 		commands.NewCmdGet(&options),
 		commands.NewCmdExec(&options),
+		commands.NewCmdDel(&options),
 		commands.NewCmdUpdate(&options))
 
 	return rootCmd
