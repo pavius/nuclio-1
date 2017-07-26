@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	//"k8s.io/client-go/kubernetes/scheme"
+	//"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 )
 
 type Client struct {
@@ -116,6 +118,22 @@ func (c *Client) WaitForResource() error {
 	})
 }
 
+func WaitForFunctionProcessed(client *Client, namespace, name string) error {
+	return wait.Poll(100*time.Millisecond, 10*time.Second, func() (bool, error) {
+		fc, err := client.Get(namespace, name)
+
+		// TODO: maybe possible that error existed before and our new post wasnt yer updated to status created ("")
+		if err == nil && fc.Status.State != FunctionStateCreated {
+			if fc.Status.State == FunctionStateError {
+				return true, fmt.Errorf("Function in error state - %s", fc.Status.Message)
+			}
+			return true, nil
+		}
+
+		return false, err
+	})
+}
+
 func (c *Client) WatchForChanges(changeChan chan Change) (*Watcher, error) {
 	return newWatcher(c, changeChan)
 }
@@ -151,10 +169,11 @@ func (c *Client) Get(namespace, name string) (*Function, error) {
 	return &result, err
 }
 
-func (c *Client) List(namespace string) (*FunctionList, error) {
+func (c *Client) List(namespace string, opts meta_v1.ListOptions) (*FunctionList, error) { //
 	var result FunctionList
 	err := c.restClient.Get().
 		Namespace(namespace).Resource(c.getNamePlural()).
+		//VersionedParams(&opts, scheme.ParameterCodec).
 		Do().Into(&result)
 	return &result, err
 }
