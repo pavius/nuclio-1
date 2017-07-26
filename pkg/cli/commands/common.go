@@ -6,6 +6,7 @@ import (
 	"github.com/nuclio/nuclio/pkg/functioncr"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/api/core/v1"
 	"github.com/pkg/errors"
 	"strconv"
 	"fmt"
@@ -108,7 +109,7 @@ func getKubeClient(copts *CommonOptions) (*kubernetes.Clientset, *functioncr.Cli
 	return clientSet, functioncrClient, nil
 }
 
-
+// merge existing/from-file function spec with command line options
 func updateFuncFromFlags(fc *functioncr.Function, opts *FuncOptions) error {
 
 	if opts.Image !="" {
@@ -119,7 +120,10 @@ func updateFuncFromFlags(fc *functioncr.Function, opts *FuncOptions) error {
 		fc.Spec.Description = opts.Description
 	}
 
+	// update replicas if scale was specified
 	if opts.Scale !="" {
+
+		// TODO: handle/Set Min/Max replicas (used only with Auto mode)
 		if opts.Scale == "auto" {
 			fc.Spec.Replicas = 0
 		} else {
@@ -130,10 +134,41 @@ func updateFuncFromFlags(fc *functioncr.Function, opts *FuncOptions) error {
 				fc.Spec.Replicas = int32(i)
 			}
 		}
-		fc.Spec.Description = opts.Description
 	}
 
-	// TODO: append labels, Env and update events and data
+	// Set specified labels, is label = "" remove it (if exists)
+	labels := Str2Map(opts.Labels, ",")
+	for k, v := range labels {
+		if k != "function" && k!= "version" && k!="alias" {
+			if v == "" {
+				delete(fc.Labels, k)
+			} else {
+				fc.Labels[k] = v
+			}
+		}
+	}
+
+	envmap := Str2Map(opts.Env, ",")
+	newenv := []v1.EnvVar{}
+
+	// merge new Environment var: update existing then add new
+	for _, e := range fc.Spec.Env {
+		if v, ok := envmap[e.Name]; ok {
+			if v != "" {
+				newenv = append(newenv, v1.EnvVar{ Name:e.Name, Value:v})
+			}
+			delete(envmap, e.Name)
+		} else {
+			newenv = append(newenv, e)
+		}
+	}
+
+	for k, v := range envmap {
+		newenv = append(newenv, v1.EnvVar{ Name:k, Value:v})
+	}
+	fc.Spec.Env = newenv
+
+	// TODO: update events and data
 
 	if opts.HttpPort !=0 {
 		fc.Spec.HTTPPort = opts.HttpPort

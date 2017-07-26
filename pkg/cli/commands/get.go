@@ -75,6 +75,7 @@ func parseName(fullname string, opts *GetOptions) error {
 
 func getFunction(copts *CommonOptions, getopts *GetOptions, cmd *cobra.Command) error {
 
+	// TODO: if list, filter functions by name and specified label selector
 
 	clientSet, functioncrClient, err := getKubeClient(copts)
 	if err != nil {
@@ -117,6 +118,7 @@ func getFunction(copts *CommonOptions, getopts *GetOptions, cmd *cobra.Command) 
 
 }
 
+// return specific fields as string list for table printing
 func getFunctionFields(cs *kubernetes.Clientset, fc *functioncr.Function) []string {
 	line := []string{fc.Namespace,fc.Labels["function"],fc.Labels["version"],string(fc.Status.State)}
 

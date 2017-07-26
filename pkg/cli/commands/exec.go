@@ -52,7 +52,6 @@ func NewCmdExec(copts *CommonOptions) *cobra.Command {
 
 func invokeFunc(writer io.Writer, copts *CommonOptions, execOpts *ExecOptions, name string) error {
 
-
 	_, functioncrClient, err := getKubeClient(copts)
 	if err != nil {
 		return err

@@ -35,6 +35,7 @@ func NewCmdRun(copts *CommonOptions) *cobra.Command {
 			}
 
 			// TODO: see if we need to build (e.g. -p not null or --image), if so run build & update func spec
+			// update code fields (code, handler, runtime, ..)
 
 			err = updateFuncFromFlags(&fc, &funcOpts)
 			if err != nil {
@@ -54,7 +55,7 @@ func NewCmdRun(copts *CommonOptions) *cobra.Command {
 	return cmd
 }
 
-
+// Read function spec file (if specified -f flag) and initialize defaults
 func initFuncFromFile(copts *CommonOptions) (functioncr.Function, error) {
 
 	fc := functioncr.Function{}
@@ -79,6 +80,7 @@ func initFuncFromFile(copts *CommonOptions) (functioncr.Function, error) {
 	return fc, nil
 }
 
+// create the function resource in Kubernetes and wait for controller confirmation
 func createFunction(copts *CommonOptions, fc *functioncr.Function) error {
 	_, functioncrClient, err := getKubeClient(copts)
 	if err != nil {
