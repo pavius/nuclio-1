@@ -34,9 +34,9 @@ Diagram TBD
 
 >See more details on the architecture in [Architecture]()
 
-##Getting Started Example
+## Getting Started Example
 you can see the sdk [examples]() directory for more advanced examples  
-###Create a new function 
+### Create a new function 
 Download nuclio golang sdk
 ```go get -d github.com/nuclio/nuclio-sdk/...```
 
@@ -60,7 +60,7 @@ func Handler(context *nuclio.Context, event nuclio.Event) (interface{}, error) {
 }
 ```
 
-###Build and Execute in standalone mode 
+### Build and Execute in standalone mode 
 Download the CLI from [cli packages]() or build from source by running:
 ```
 go install aa\bb
@@ -79,9 +79,9 @@ docker run -p 8080:8080 example:latest
 ```
 
 
-###Execute on a Kubernetes Cluster
+### Execute on a Kubernetes Cluster
 
-####Prepare the cluster 
+#### Prepare the cluster 
 First make sure you have a working kubernetes cluster and kubectl (kubernetes cli).
 Can see a detailed explanation on how to properly install and configure kubernetes and optionally create a local docker image repository in the [following link]().
 
@@ -89,7 +89,7 @@ Verify nuclio controller deployment is running or start it using the following c
 ```bash
 kubectl create -f http://path/to/controller.yaml
 ```
-####Build or Run the function
+#### Build or Run the function
 If we plan on creating multiple function instances from the same code we can `build` the function and push the image to a local/remote repository, later on we can create different instances and specify unique parameters and environment variables for every instance using the `run` command flags. Or we can build and run the function in a single `run` command, we will demonstrate the later option.
 
 ```
@@ -99,7 +99,7 @@ the `-k` option specify the path to the Kubernetes config file, it can also be s
 
 if the function was already built and pushed to the repository we can just specify the function image path with the `-i` option, this will skip the build phase and doesnt require specifing build parameters (path, handler, ..).
 
-####Test the function
+#### Test the function
 We can verify that our function was created using the `nuclio get` command and invoke the function using the `nuclio exec` command.
 ```
 nuclio exec myfunc -b bodystring 
@@ -113,7 +113,7 @@ to access the function we can HTTP to the exposed local or remote function servi
 >**Note:** if we want to create a custom API url to our function we can use kubernetes [ingress]() resources 
 
 
-####Using the function.yaml file
+#### Using the function.yaml file
 Like other kubernetes resources the functions can be specified or retrived using yaml or json files, it allows granular and reusable specification of function parameters, events and data bindings. you can see details in the [function spec documentation]().  
 
 A function yaml can look like:
@@ -141,9 +141,9 @@ and can retrive the full function spec and status using:
 nuclio get myfunc -o yaml
 ```
 
-##To start developing nuclio
+## To start developing nuclio
 
 TBD how to clone the repo, build and develop basics 
 
-##Support 
+## Support 
 can check out our [FAQ]() or post questions to nuclio [slack channel]()  
