@@ -1,10 +1,10 @@
-#**nuclio** – “Serverless” for real-time events and data processing  
+# **nuclio** – “Serverless” for real-time events and data processing  
 nuclio is a new serverless project, derived from iguazio’s elastic “data lifecycle management” service for high-performance events and data processing. nuclio is being extended to support large variety of event and data sources, it can run as a standalone binary (e.g. for IoT devices), be packaged in a docker container, or integrate with a container orchestrator like Kubernetes.
 
 nuclio is super fast, a single function instance can process hundreds of thousand http requests or data records per second, that's 10-100x faster than other frameworks, see more in [benchmarks]()  
 
 >**Note:** nuclio is still under development and not recommended for production use
-##Why another “serverless” project ?
+## Why another “serverless” project ?
 We considered existing cloud and open source serverless, none addressed our needs:
 
  - Real-time processing with minimal CPU and IO overhead and maximum parallelism 
@@ -14,7 +14,7 @@ We considered existing cloud and open source serverless, none addressed our need
  - Portability across low-power devices, laptops, on-prem cluster, and public cloud
 
 We designed nuclio for extensibility using a modular and layered approach, we hope many will join us in developing new modules, integrations with more event sources, data sources, developer tools, and cloud platform integrations.   
-##nuclio high-level architecture
+## nuclio high-level architecture
 
 Diagram TBD
 
