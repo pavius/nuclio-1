@@ -38,7 +38,9 @@ func NewCmdRun(copts *CommonOptions) *cobra.Command {
 			}
 
 			// TODO: see if we need to build (e.g. -p not null or --image), if so run build & update func spec
-			// update code fields (code, handler, runtime, ..)
+			// Push registry must be specified if we build & run, fc image need to be registry/functionName
+			// alternatively can specify the image path (no build) which includes the registry (on none for default reg)
+			// update code fields (code, handler, runtime, ..) based on defailts
 
 			err = updateFuncFromFlags(&fc, &funcOpts)
 			if err != nil {

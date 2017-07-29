@@ -64,7 +64,7 @@ func initFileOption(cmd *cobra.Command, opts *CommonOptions) {
 
 func initBuildOptions(cmd *cobra.Command, opts *FuncOptions) {
 	cmd.Flags().StringVarP(&opts.CodePath, "path", "p", "", "Function source code path")
-	cmd.Flags().StringVar(&opts.Handler, "handler", "handler", "Function handler name")
+	cmd.Flags().StringVar(&opts.Handler, "handler", "Handler", "Function handler name")
 	cmd.Flags().StringVarP(&opts.Image, "image", "i", "", "Container image to use, will use function name if not specified")
 	cmd.Flags().StringVar(&opts.Runtime, "runtime", "go", "Function runtime language and version e.g. go, python 2.7, ..")
 
