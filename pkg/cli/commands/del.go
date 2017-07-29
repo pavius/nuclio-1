@@ -22,7 +22,12 @@ func NewCmdDel(copts *CommonOptions) *cobra.Command {
 			}
 
 			err = deleteFunction(copts, name)
-			return err
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(),"The function %s was deleted succesfuly\n",name)
+
+			return nil
 		},
 	}
 

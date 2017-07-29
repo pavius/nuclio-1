@@ -4,17 +4,15 @@ import (
 	"github.com/spf13/cobra"
 	"fmt"
 	"github.com/nuclio/nuclio/pkg/functioncr"
-	"io/ioutil"
-	"github.com/ghodss/yaml"
 )
 
 func NewCmdRun(copts *CommonOptions) *cobra.Command {
-	var buildOpts BuildOptions
 	var funcOpts FuncOptions
-	var interactive bool
+	//var interactive bool
 	cmd := &cobra.Command{
 		Use:     "run function-name [-n namespace] [options]",
-		Short:   "Deploy and Run a Function",
+		Short:   "Build, Deploy and Run a Function",
+		Example: "run myfunc -p ./ -h HandleEvent",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			fc, err := initFuncFromFile(copts)
@@ -34,6 +32,11 @@ func NewCmdRun(copts *CommonOptions) *cobra.Command {
 				fc.Namespace = copts.Namespace
 			}
 
+			err = updateBuildFromFlags(&fc, &funcOpts)
+			if err != nil {
+				return err
+			}
+
 			// TODO: see if we need to build (e.g. -p not null or --image), if so run build & update func spec
 			// update code fields (code, handler, runtime, ..)
 
@@ -43,41 +46,20 @@ func NewCmdRun(copts *CommonOptions) *cobra.Command {
 			}
 
 			err = createFunction(copts, &fc)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(),"The function %s was created succesfuly\n",fc.Name)
 
-			return err
+			return nil
 		},
 	}
 
 	initFileOption(cmd, copts)
-	initBuildOptions(cmd, &buildOpts)
+	initBuildOptions(cmd, &funcOpts)
 	initFuncOptions(cmd, &funcOpts)
-	cmd.Flags().BoolVarP(&interactive,"interactive","i",false,"Submit Function Calls Interactively")
+	//cmd.Flags().BoolVarP(&interactive,"interactive","t",false,"Submit Function Calls Interactively")
 	return cmd
-}
-
-// Read function spec file (if specified -f flag) and initialize defaults
-func initFuncFromFile(copts *CommonOptions) (functioncr.Function, error) {
-
-	fc := functioncr.Function{}
-	fc.TypeMeta.APIVersion = "nuclio.io/v1"
-	fc.TypeMeta.Kind = "Function"
-	fc.Namespace = "default"
-
-	if copts.SpecFile == "" {
-		return fc, nil
-	}
-
-	text, err := ioutil.ReadFile(copts.SpecFile)
-	if err != nil {
-		return fc, err
-	}
-
-	err = yaml.Unmarshal(text, &fc)
-	if err != nil {
-		return fc, err
-	}
-
-	return fc, nil
 }
 
 // create the function resource in Kubernetes and wait for controller confirmation

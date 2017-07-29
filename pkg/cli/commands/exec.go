@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"os"
 	"github.com/spf13/cobra"
 	"fmt"
 	"io"
@@ -9,6 +8,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"net/url"
+	"strings"
 )
 
 type ExecOptions struct {
@@ -41,7 +43,7 @@ func NewCmdExec(copts *CommonOptions) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&execOpts.ClusterIP, "cluster-ip", "i", os.Getenv("REMOTE_CLUSTER_IP"), "Remote cluster IP")
+	cmd.Flags().StringVarP(&execOpts.ClusterIP, "cluster-ip", "i", "", "Remote cluster IP, will use kubeconf host address by default")
 	cmd.Flags().StringVarP(&execOpts.ContentType, "content-type", "c", "application/json", "HTTP Content Type")
 	cmd.Flags().StringVarP(&execOpts.Url, "url", "u", "", "invocation URL")
 	cmd.Flags().StringVarP(&execOpts.Method, "method", "m", "GET", "HTTP Method")
@@ -52,7 +54,7 @@ func NewCmdExec(copts *CommonOptions) *cobra.Command {
 
 func invokeFunc(writer io.Writer, copts *CommonOptions, execOpts *ExecOptions, name string) error {
 
-	_, functioncrClient, err := getKubeClient(copts)
+	cs, functioncrClient, err := getKubeClient(copts)
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,20 @@ func invokeFunc(writer io.Writer, copts *CommonOptions, execOpts *ExecOptions, n
 		return err
 	}
 
-	port :=  strconv.Itoa(int(fc.Spec.HTTPPort))
+	svc, err := cs.Core().Services(fc.Namespace).Get(fc.Name, meta_v1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if execOpts.ClusterIP == "" {
+		url, err := url.Parse(copts.KubeHost)
+		if err == nil && url.Host !="" {
+			hostport := strings.Split(url.Host, ":")
+			execOpts.ClusterIP = hostport[0]
+		}
+	}
+
+	port :=  strconv.Itoa(int(svc.Spec.Ports[0].NodePort))
 
 	fullpath := "http://" + execOpts.ClusterIP + ":" + port + "/" + execOpts.Url
 	fmt.Fprintf(writer, "Request Url: %s\n   Opts:%+v\n", fullpath, *execOpts)
@@ -85,7 +100,7 @@ func invokeFunc(writer io.Writer, copts *CommonOptions, execOpts *ExecOptions, n
 		return err
 	}
 	defer res.Body.Close()
-	fmt.Fprintf(writer, "Stat: %s\nBody:\n", res.Status)
+	fmt.Fprintf(writer, "\nStat: %s\nResponce Body:\n", res.Status)
 
 	htmlData, err := ioutil.ReadAll(res.Body)
 	if err != nil {

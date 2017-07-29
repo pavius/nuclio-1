@@ -11,19 +11,22 @@ import (
 	"strconv"
 	"fmt"
 	"github.com/nuclio/nuclio/pkg/zap"
+	"os"
+	"io/ioutil"
+	"github.com/ghodss/yaml"
 )
 
 
 type CommonOptions struct {
 	Verbose         bool
-	AllNamespaces   bool
 	Namespace       string
 	Kubeconf        string
+	KubeHost        string
 	SpecFile        string
 	Logger          *nucliozap.NuclioZap
 }
 
-type BuildOptions struct {
+type FuncOptions struct {
 	CodePath        string
 	CodeKey         string
 	CodeWatch       bool
@@ -35,9 +38,7 @@ type BuildOptions struct {
 	NuclioSourceDir string
 	NuclioSourceURL string
 	PushRegistry    string
-}
 
-type FuncOptions struct {
 	Description  string
 	Image        string
 	Env          string
@@ -61,21 +62,21 @@ func initFileOption(cmd *cobra.Command, opts *CommonOptions) {
 	cmd.Flags().StringVarP(&opts.SpecFile, "file", "f", "", "Function Spec File")
 }
 
-func initBuildOptions(cmd *cobra.Command, opts *BuildOptions) {
-	cmd.Flags().StringVarP(&opts.CodePath, "path", "p", "", "Function code path")
-	cmd.Flags().StringVar(&opts.Handler, "handler", "", "Function handler name")
-	cmd.Flags().StringVarP(&opts.OutputType, "output", "o", "docker", "Build output type - docker|binary")
-	cmd.Flags().StringVarP(&opts.PushRegistry, "registry", "r", "", "URL of container registry (for push)")
+func initBuildOptions(cmd *cobra.Command, opts *FuncOptions) {
+	cmd.Flags().StringVarP(&opts.CodePath, "path", "p", "", "Function source code path")
+	cmd.Flags().StringVar(&opts.Handler, "handler", "handler", "Function handler name")
+	cmd.Flags().StringVarP(&opts.Image, "image", "i", "", "Container image to use, will use function name if not specified")
+	cmd.Flags().StringVar(&opts.Runtime, "runtime", "go", "Function runtime language and version e.g. go, python 2.7, ..")
 
-	cmd.Flags().StringVar(&opts.Runtime, "runtime", "", "Function runtime language and version e.g. go, python 2.7, ..")
+	cmd.Flags().StringVarP(&opts.OutputType, "output", "o", "docker", "Build output type - docker|binary")
+	cmd.Flags().StringVarP(&opts.PushRegistry, "registry", "r", os.Getenv("PUSH_REGISTRY"), "URL of container registry (for push)")
 	cmd.Flags().StringVar(&opts.NuclioSourceDir, "src-dir", "", "Local directory with nuclio sources (avoid cloning) ")
 	cmd.Flags().StringVar(&opts.NuclioSourceURL, "src-url", "git@github.com:nuclio/nuclio.git", "nuclio sources url for git clone")
 }
 
 func initFuncOptions(cmd *cobra.Command, opts *FuncOptions) {
-	cmd.Flags().StringVarP(&opts.Image, "image", "m", "", "Container image to use")
 	cmd.Flags().StringVar(&opts.Description, "desc", "", "Function description")
-	cmd.Flags().StringVarP(&opts.Scale, "scale", "s", "", "Function scaling (auto|number)")
+	cmd.Flags().StringVarP(&opts.Scale, "scale", "s", "1", "Function scaling (auto|number)")
 	cmd.Flags().StringVarP(&opts.Labels, "labels", "l", "", "Additional function labels (lbl1=val1,lbl2=val2..)")
 	cmd.Flags().StringVarP(&opts.Env, "env", "e", "", "Environment variables (name1=val1,name2=val2..)")
 	cmd.Flags().StringVar(&opts.Events, "events", "", "Comma seperated list of event sources (in json)")
@@ -91,6 +92,7 @@ func getKubeClient(copts *CommonOptions) (*kubernetes.Clientset, *functioncr.Cli
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Failed to create REST config")
 	}
+	copts.KubeHost = restConfig.Host
 
 	clientSet, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
@@ -109,12 +111,56 @@ func getKubeClient(copts *CommonOptions) (*kubernetes.Clientset, *functioncr.Cli
 	return clientSet, functioncrClient, nil
 }
 
-// merge existing/from-file function spec with command line options
-func updateFuncFromFlags(fc *functioncr.Function, opts *FuncOptions) error {
+// Read function spec file (if specified -f flag) and initialize defaults
+func initFuncFromFile(copts *CommonOptions) (functioncr.Function, error) {
+
+	fc := functioncr.Function{}
+	fc.TypeMeta.APIVersion = "nuclio.io/v1"
+	fc.TypeMeta.Kind = "Function"
+	fc.Namespace = "default"
+
+	if copts.SpecFile == "" {
+		return fc, nil
+	}
+
+	text, err := ioutil.ReadFile(copts.SpecFile)
+	if err != nil {
+		return fc, err
+	}
+
+	err = yaml.Unmarshal(text, &fc)
+	if err != nil {
+		return fc, err
+	}
+
+	return fc, nil
+}
+
+
+
+func updateBuildFromFlags(fc *functioncr.Function, opts *FuncOptions) error {
+
+	if opts.CodePath !="" {
+		fc.Spec.Code.Path = opts.CodePath
+	}
+
+	if opts.Handler !="" {
+		fc.Spec.Handler = opts.Handler
+	}
+
+	if opts.Runtime !="" {
+		fc.Spec.Runtime = opts.Runtime
+	}
 
 	if opts.Image !="" {
 		fc.Spec.Image = opts.Image
 	}
+
+	return nil
+}
+
+// merge existing/from-file function spec with command line options
+func updateFuncFromFlags(fc *functioncr.Function, opts *FuncOptions) error {
 
 	if opts.Description !="" {
 		fc.Spec.Description = opts.Description

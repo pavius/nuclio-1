@@ -41,26 +41,26 @@ func NewNuclioCLI() *cobra.Command {
 				return errors.Wrap(err, "Failed to create logger")
 			}
 
-			if options.AllNamespaces {
-				options.Namespace = ""
-			}
-
 			return nil
 		},
 	}
 
-	rootCmd.PersistentFlags().BoolVarP(&options.Verbose, "verbose", "", false, "verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&options.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&options.Kubeconf, "kconf", "k", os.Getenv("KUBECONFIG"),
 		"Path to Kubernetes config (admin.conf)")
 	rootCmd.PersistentFlags().StringVarP(&options.Namespace, "namespace", "n", "default", "Kubernetes namespace")
-	rootCmd.PersistentFlags().BoolVar(&options.AllNamespaces,"all-namespaces",false,"Show resources from all namespaces")
 
 	// link child commands
-	rootCmd.AddCommand(commands.NewCmdRun(&options),
+	rootCmd.AddCommand(
 		commands.NewCmdGet(&options),
+		commands.NewCmdBuild(&options),
+		commands.NewCmdRun(&options),
+		commands.NewCmdUpdate(&options),
 		commands.NewCmdExec(&options),
 		commands.NewCmdDel(&options),
-		commands.NewCmdUpdate(&options))
+	)
+
+	// TODO: add CLI commends & implementation for Logs (function logs), Stats/Top, Version (print CLI version)
 
 	return rootCmd
 }

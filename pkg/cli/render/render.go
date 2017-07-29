@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"bytes"
 	"encoding/json"
+	"strings"
 )
 
 // return string list based on resource type
@@ -71,4 +72,12 @@ func Print_yaml(writer io.Writer, item interface{}) error {
 	if err != nil { return err}
 	fmt.Fprintln(writer, string(body))
 	return nil
+}
+
+func Map2Str( in map[string]string) string {
+	list := []string{}
+	for k, v := range in {
+		list = append(list, k + "=" + v)
+	}
+	return strings.Join(list, ",")
 }

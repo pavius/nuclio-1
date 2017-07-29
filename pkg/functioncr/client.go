@@ -25,6 +25,7 @@ type Client struct {
 	logger         nuclio.Logger
 	restClient     *rest.RESTClient
 	clientSet      *kubernetes.Clientset
+	sceme          *runtime.Scheme
 	apiexClientSet *apiex_client.Clientset
 }
 
@@ -38,7 +39,7 @@ func NewClient(parentLogger nuclio.Logger,
 		clientSet: clientSet,
 	}
 
-	newClient.restClient, err = newClient.createRESTClient(restConfig, clientSet)
+	newClient.sceme, newClient.restClient, err = newClient.createRESTClient(restConfig, clientSet)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create REST client")
 	}
@@ -173,13 +174,13 @@ func (c *Client) List(namespace string, opts meta_v1.ListOptions) (*FunctionList
 	var result FunctionList
 	err := c.restClient.Get().
 		Namespace(namespace).Resource(c.getNamePlural()).
-		//VersionedParams(&opts, scheme.ParameterCodec).
+		//VersionedParams(&opts, scheme.ParameterCodec).   // not working, opened a k8s issue
 		Do().Into(&result)
 	return &result, err
 }
 
 func (c *Client) createRESTClient(restConfig *rest.Config,
-	clientSet *kubernetes.Clientset) (*rest.RESTClient, error) {
+	clientSet *kubernetes.Clientset) (*runtime.Scheme, *rest.RESTClient, error) {
 	c.logger.Debug("Creating REST client")
 
 	scheme := runtime.NewScheme()
@@ -187,7 +188,7 @@ func (c *Client) createRESTClient(restConfig *rest.Config,
 	schemeGroupVersion := c.getGroupVersion()
 
 	if err := schemeBuilder.AddToScheme(scheme); err != nil {
-		return nil, errors.Wrap(err, "Failed to add scheme to builder")
+		return nil, nil, errors.Wrap(err, "Failed to add scheme to builder")
 	}
 
 	restConfigCopy := *restConfig
@@ -198,7 +199,9 @@ func (c *Client) createRESTClient(restConfig *rest.Config,
 		CodecFactory: serializer.NewCodecFactory(scheme),
 	}
 
-	return rest.RESTClientFor(&restConfigCopy)
+	client, err := rest.RESTClientFor(&restConfigCopy)
+	return scheme, client, err
+	//return rest.RESTClientFor(&restConfigCopy)
 }
 
 func (c *Client) getKnownType(scheme *runtime.Scheme) error {

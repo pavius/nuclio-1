@@ -7,7 +7,6 @@ import (
 )
 
 func NewCmdUpdate(copts *CommonOptions) *cobra.Command {
-	var buildOpts BuildOptions
 	var funcOpts FuncOptions
 	cmd := &cobra.Command{
 		Use:     "update function-name [-n namespace] [options]",
@@ -24,12 +23,17 @@ func NewCmdUpdate(copts *CommonOptions) *cobra.Command {
 			}
 
 			err = updateFunc(copts, &funcOpts, name)
-			return err
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(),"The function %s was updated succesfuly\n",name)
+
+			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&funcOpts.Publish, "publish", false, "Publish a function version")
-	initBuildOptions(cmd, &buildOpts)
+	initBuildOptions(cmd, &funcOpts)
 	initFuncOptions(cmd, &funcOpts)
 	return cmd
 }
@@ -44,6 +48,11 @@ func updateFunc(copts *CommonOptions, funcOpts *FuncOptions, name string) error 
 	}
 
 	fc, err = functioncrClient.Get(copts.Namespace, name)
+	if err != nil {
+		return err
+	}
+
+	err = updateBuildFromFlags(fc, funcOpts)
 	if err != nil {
 		return err
 	}
