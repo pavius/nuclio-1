@@ -95,6 +95,11 @@ func invokeFunc(writer io.Writer, copts *CommonOptions, execOpts *ExecOptions, n
 	}
 
 	req.Header.Set("Content-Type", execOpts.ContentType)
+	headers := Str2Map(execOpts.Headers, ",")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
 	res, err := client.Do(req)
 	if err != nil {
 		return err
