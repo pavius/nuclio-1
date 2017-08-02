@@ -28,14 +28,22 @@ type GetOptions struct {
 func NewCmdGet(copts *CommonOptions) *cobra.Command {
 	var getopts GetOptions
 	cmd := &cobra.Command{
-		Use:     "get [resource-name[:version]] [-l selector] [-o text|json|yaml]",
+		Use:     "get resource-type [name[:version]] [-l selector] [-o text|wide|json|yaml] [--all-namespaces]",
 		Short:   "Display one or many resources",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			if len(args) < 1 {
+				return fmt.Errorf("Missing resource type, e.g. functions")
+			}
+
+			if args[0]!="fu" && args[0]!="functions" {
+				return fmt.Errorf("unknown resource type %s - try 'function'",args[0])
+			}
+
 			// TODO: add more resource types (events ..) , for now support functions only
 
-			if len(args) > 0 {
-				err := parseName(args[0],&getopts)
+			if len(args) > 1 {
+				err := parseName(args[1],&getopts)
 				if err != nil {
 					return err
 				}

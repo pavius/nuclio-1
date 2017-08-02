@@ -25,7 +25,7 @@ type ExecOptions struct {
 func NewCmdExec(copts *CommonOptions) *cobra.Command {
 	var execOpts ExecOptions
 	cmd := &cobra.Command{
-		Use:     "exec function-name [-n namespace] [options]",
+		Use:     "exec function-name[:ver] [-n namespace] [options]",
 		Short:   "Execute/Invoke a Function",
 		RunE: func(cmd *cobra.Command, args []string) error {
 

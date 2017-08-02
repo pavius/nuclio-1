@@ -9,15 +9,19 @@ import (
 func NewCmdUpdate(copts *CommonOptions) *cobra.Command {
 	var funcOpts FuncOptions
 	cmd := &cobra.Command{
-		Use:     "update function-name [-n namespace] [options]",
-		Short:   "Update a Function",
+		Use:     "update resource-type name[:ver] [-n namespace] [options]",
+		Short:   "Update a resource (e.g. function)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if len(args) < 1 {
-				return fmt.Errorf("Missing function name")
+			if len(args) < 2 {
+				return fmt.Errorf("Missing resource type and name, e.g. function myfunc")
 			}
 
-			name, err := FuncName2Resource(args[0])
+			if args[0]!="fu" && args[0]!="function" {
+				return fmt.Errorf("unknown resource type %s - try 'function'",args[0])
+			}
+
+			name, err := FuncName2Resource(args[1])
 			if err != nil {
 				return err
 			}
