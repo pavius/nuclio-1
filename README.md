@@ -9,7 +9,7 @@ We considered existing cloud and open source serverless, none addressed our need
 
  - Real-time processing with minimal CPU and IO overhead and maximum parallelism 
  - Native integration with large variety of data/event sources and processing models 
- - Abstracting data resources from the function code to enable re-use, simplicity, and data path acceleration
+ - Abstracting data resources from the function code to enable re-use, simplicity, portability, and data path acceleration
  - Simple debugging, regression testing, and multi-versioned CI/CD pipelines
  - Portability across low-power devices, laptops, on-prem cluster, and public cloud
 
@@ -24,7 +24,7 @@ We designed nuclio for extensibility using a modular and layered approach, we ho
 
 **Event Sources** - Functions can be invoked through a variety of event sources (e.g. HTTP, RabitMQ, Kafka, Kinesis, DynamoDB, iguazio v3io, schedule, etc’) which are defined in the function spec. Event sources are divided to few event classes (req/rep, async, stream, pooling) which define their behaviour. Different event sources can plug seamlessly to the same function without sacrificing performance, allowing portability, reuse, and flexibility.  
 
-**Data Bindings** -  allow a user to specify the persistent input/output data resources used by the function (data connections are preserved between executions).  Bound data can be in the form of files, objects, records, messages etc. the function spec may include an array of data binding definitions, each specifying the data resource, its credentials and usage parameters.
+**Data Bindings** -  allow a user to specify persistent input/output data resources used by the function (data connections are preserved between executions).  Bound data can be in the form of files, objects, records, messages etc. the function spec may include an array of data binding definitions, each specifying the data resource, its credentials and usage parameters. Data bindings abstraction allow using the same function with different data sources of the same type and enable function portability.
 
 **Builder** - take raw code, optional build instructions and dependencies and generate the function artifact (binary or docker container image), it can push the container image to a specified image repository. The builder can run in the context of the CLI or as a seperate service for automated development pipelines. 
 
@@ -101,6 +101,14 @@ if the function was already built and pushed to the repository we can just speci
 
 #### Test the function
 We can verify that our function was created using the `nuclio get` command and invoke the function using the `nuclio exec` command.
+
+```
+>nuclio get fu
+  NAMESPACE | NAME  | VERSION |   STATE   |      LOCAL URL      | HOST PORT | REPLICAS
+  default   | hello | latest  | processed | 10.107.164.223:8080 |     31010 | 1/1
+  default   | kuku  | latest  | processed | 10.96.188.133:8080  |     31077 | 1/1
+```
+
 ```
 nuclio exec myfunc -b bodystring 
 ```
