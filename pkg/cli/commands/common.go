@@ -39,6 +39,7 @@ type FuncOptions struct {
 	NuclioSourceURL string
 	PushRegistry    string
 
+	Alias        string
 	Description  string
 	Image        string
 	Env          string

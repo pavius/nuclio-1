@@ -37,6 +37,7 @@ func NewCmdUpdate(copts *CommonOptions) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&funcOpts.Publish, "publish", false, "Publish a function version")
+	cmd.Flags().StringVar(&funcOpts.Alias, "alias", "", "Alias to tag the function version with")
 	initBuildOptions(cmd, &funcOpts)
 	initFuncOptions(cmd, &funcOpts)
 	return cmd

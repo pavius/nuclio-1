@@ -16,7 +16,7 @@ We considered existing cloud and open source serverless, none addressed our need
 We designed nuclio for extensibility using a modular and layered approach, we hope many will join us in developing new modules, integrations with more event sources, data sources, developer tools, and cloud platform integrations.   
 ## nuclio high-level architecture
 
-Diagram TBD
+![architecture](docs/architecture.png)
 
 **Processors** - listen on one or more event sources (e.g. HTTP, Message Queue, Stream) and execute user functions with one or more parallel workers. The workers use language specific runtimes to execute the function (via native calls, shmem, or shell). Processors integrate with platform facilities for logging, monitoring, and configuration through abstract interfaces allowing greater portability and extensibility, e.g. can log to screen, file, or log stream.
  
@@ -110,8 +110,15 @@ nuclio exec myfunc -b bodystring
 nuclio controller will automatically create the kubernetes function, pods, deployment, service, and optionally pod auto-scaler. we can also view our function status using ```kubectl get functions``` or watch the kubernetes deployments and services with our function name and proper labels.
 
 to access the function we can HTTP to the exposed local or remote function service port (external ports are secified with the `--port` cli option).
->**Note:** if we want to create a custom API url to our function we can use kubernetes [ingress]() resources 
+>**Note:** if we want to create a custom API url to our function we can use kubernetes [ingress]() resources, in future version this task will be automated  
 
+#### Function versioning 
+
+By default functions are tagged with version `latest`, versions can be published and assigned aliases (e.g. production, beta, ..)
+older versions can be viewed in the CLI and can be managed independently. older versions are immutable and cannot be modified.
+
+to publish a function and tag it with an alias use:
+``` nuclio update myfunc --publish --alias prod```
 
 #### Using the function.yaml file
 Like other kubernetes resources the functions can be specified or retrived using yaml or json files, it allows granular and reusable specification of function parameters, events and data bindings. you can see details in the [function spec documentation]().  
