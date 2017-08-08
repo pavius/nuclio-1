@@ -1,47 +1,112 @@
-# **nuclio** – “Serverless” for real-time events and data processing  
-nuclio is a new serverless project, derived from iguazio’s elastic “data lifecycle management” service for high-performance events and data processing. nuclio is being extended to support large variety of event and data sources, it can run as a standalone binary (e.g. for IoT devices), be packaged in a docker container, or integrate with a container orchestrator like Kubernetes.
+# nuclio &mdash; a "Serverless" Solution for Real-Time Events and Data Processing
 
-nuclio is super fast, a single function instance can process hundreds of thousand http requests or data records per second, that's 10-100x faster than other frameworks, see more in [benchmarks]()  
+<!-- TODO: Add/update the link targets in this file, and adjust the reference text accordingly. -->
 
->**Note:** nuclio is still under development and not recommended for production use
-## Why another “serverless” project ?
-We considered existing cloud and open source serverless, none addressed our needs:
+nuclio is a new serverless project, derived from iguazio's elastic data life-cycle management service for high-performance events and data processing.
+nuclio is being extended to support a large variety of event and data sources.
+You can use nuclio as a standalone binary (for example, for IoT devices), package it within a Docker container, or integrate it with a container orchestrator like Kubernetes.
 
- - Real-time processing with minimal CPU and IO overhead and maximum parallelism 
- - Native integration with large variety of data/event sources and processing models 
- - Abstracting data resources from the function code to enable re-use, simplicity, portability, and data path acceleration
- - Simple debugging, regression testing, and multi-versioned CI/CD pipelines
- - Portability across low-power devices, laptops, on-prem cluster, and public cloud
+nuclio is extremely fast. A single function instance can process hundreds of thousands of HTTP requests or data records per second.
+This is 10&ndash;100 times faster than other frameworks.
+For more information, see the nuclio [benchmarks](vendor/github.com/pavius/zap/benchmarks).
 
-We designed nuclio for extensibility using a modular and layered approach, we hope many will join us in developing new modules, integrations with more event sources, data sources, developer tools, and cloud platform integrations.   
-## nuclio high-level architecture
+**Note:** nuclio is still under development, and is not recommended for production use.
+
+**In This Document**  
+-  [Why Another "serverless" Project?](#why-another-serverless-project)
+-  [nuclio High-Level Architecture](#nuclio-high-level-architecture)
+-  [Getting Started Example](#getting-started-example)
+-  [Developing nuclio](#developing-nuclio)
+-  [Support](#support)
+
+## Why Another "serverless" Project?
+
+We considered existing cloud and open-source serverless solutions, but none addressed our needs:
+
+-  Real-time processing with minimal CPU and I/O overhead and maximum parallelism
+-  Native integration with a large variety of data and event sources, and processing models
+
+-  Abstraction of data resources from the function code, to support code re-use, simplicity, portability, and data-path acceleration
+-  Simple debugging, regression testing, and multi-versioned CI/CD pipelines
+-  Portability across low-power devices, laptops, on-prem clusters, and public clouds
+
+We designed nuclio to be extendable, using a modular and layered approach.
+We hope many will join us in developing new modules and integrations with more event and data sources, developer tools, and cloud platforms.
+
+
+## nuclio High-Level Architecture
 
 ![architecture](docs/architecture.png)
 
-**Processors** - listen on one or more event sources (e.g. HTTP, Message Queue, Stream) and execute user functions with one or more parallel workers. The workers use language specific runtimes to execute the function (via native calls, shmem, or shell). Processors integrate with platform facilities for logging, monitoring, and configuration through abstract interfaces allowing greater portability and extensibility, e.g. can log to screen, file, or log stream.
- 
-**Controller** - accept function and event source specifications, invoke builders and processors through orchestration platform (such as Kubernetes), and manage function elasticity, lifecycle and versions.  
+<dl>
+  <dt>Processors</dt>
+  <dd>A processor listens on one or more event sources (for example, HTTP, Message Queue, Stream), and executes user functions with one or more parallel workers.
+      The workers use language-specific runtimes to execute the function (via native calls, SHMEM, or shell).
+      Processors use abstract interfaces to integrate with platform facilities for logging, monitoring, and configuration, allowing for greater portability and extensibility (such as logging to a screen, file, or log stream).
+  </dd>
+</dl>
 
-**Event Sources** - Functions can be invoked through a variety of event sources (e.g. HTTP, RabitMQ, Kafka, Kinesis, DynamoDB, iguazio v3io, schedule, etc’) which are defined in the function spec. Event sources are divided to few event classes (req/rep, async, stream, pooling) which define their behaviour. Different event sources can plug seamlessly to the same function without sacrificing performance, allowing portability, reuse, and flexibility.  
+<dl>
+  <dt>Controller</dt>
+  <dd>A controller accepts function and event-source specifications, invokes builders and processors through an orchestration platform (such as Kubernetes), and manages function elasticity, life cycle, and versions.
+  </dd>
+</dl>
 
-**Data Bindings** -  allow a user to specify persistent input/output data resources used by the function (data connections are preserved between executions).  Bound data can be in the form of files, objects, records, messages etc. the function spec may include an array of data binding definitions, each specifying the data resource, its credentials and usage parameters. Data bindings abstraction allow using the same function with different data sources of the same type and enable function portability.
+<dl>
+  <dt>Event Sources</dt>
+  <dd>Functions can be invoked through a variety of event sources (such as HTTP, RabitMQ, Kafka, Kinesis, DynamoDB, iguazio v3io, or schedule), which are defined in the function specification.  
+      Event sources are divided into several event classes (req/rep, async, stream, pooling), which define the sources' behavior.  
+      Different event sources can plug seamlessly into the same function without sacrificing performance, allowing for portability, code reuse, and flexibility.
+  </dd>
+</dl>
 
-**Builder** - take raw code, optional build instructions and dependencies and generate the function artifact (binary or docker container image), it can push the container image to a specified image repository. The builder can run in the context of the CLI or as a seperate service for automated development pipelines. 
+<dl>
+  <dt>Data Bindings</dt>
+  <dd>Data-binding rules allow users to specify persistent input/output data resources to be used by the function.
+      (Data connections are preserved between executions.)
+      Bound data can be in the form of files, objects, records, messages etc.  
+      The function specification may include an array of data-binding rules, each specifying the data resource and its credentials and usage parameters.  
+      Data-binding abstraction allows using the same function with different data sources of the same type, and enables function portability.
+  </dd>
+</dl>
 
-**Dealer** - used with streaming and batch jobs to distribute a set of tasks or data partitions/shards among the available function instances and guarantee all tasks are concluded successfully. For example if a function reads from a message stream with 20 partitions it will guarantee the partitions are distributed evenly across workers taking into account the number of function instances and failures.
+<dl>
+  <dt>Builder</dt>
+  <dd>A builder receives raw code and optional build instructions and dependencies, and generates the function artifact &mdash; a binary file or a Docker container image, which the builder can also push to a specified image repository.  
+      The builder can run in the context of the CLI or as a separate service for automated development pipelines.
+  </dd>
+</dl>
 
-**nuclio SDK** - used by function developers to write, test, and submit their code without having the entire nuclio source tree
+<dl>
+  <dt>Dealer</dt>
+  <dd>A dealer is used with streaming and batch jobs to distribute a set of tasks or data partitions/shards among the available function instances, and guarantee that all tasks are completed successfully.
+      For example, if a function reads from a message stream with 20 partitions, the dealer will guarantee that the partitions are distributed evenly across workers, taking into account the number of function instances and failures.
+  </dd>
+</dl>
 
->See more details on the architecture in [Architecture]()
+<dl>
+  <dt>nuclio SDK</dt>
+  <dd>The nuclio SDK is used by function developers to write, test, and submit their code, without the need for the entire nuclio source tree.
+  </dd>
+</dl>
 
-## Getting Started Example
-you can see the sdk [examples]() directory for more advanced examples  
-### Create a new function 
-Download nuclio golang sdk
-```go get -d github.com/nuclio/nuclio-sdk/...```
+For more information about the nuclio architecture, see [Architecture]().
 
-Create a simple function like the one below and save in a file (example.go)
+## Getting-Started Example
 
+Following is a basic step-by-step example of using the nuclio Go (golang) SDK.
+For more advanced examples, see the SDK [examples]() directory.
+
+### Preliminary Step: Download the nuclio SDK
+
+Use the following command to download the nuclio Go SDK:  
+```
+go get -d github.com/nuclio/nuclio-sdk/...
+```
+
+### Step 1: Create a New Function
+
+Create an **example.go** file, add code to import the nuclio SDK, and define a simple `Handler()` function that uses the SDK, as demonstrated below:  
 ```golang
 package handler
 
@@ -60,79 +125,103 @@ func Handler(context *nuclio.Context, event nuclio.Event) (interface{}, error) {
 }
 ```
 
-### Build and Execute in standalone mode 
-Download the CLI from [cli packages]() or build from source by running:
-```
-go install aa\bb
-```
-you can see a full CLI guide in [here]() or just run `nuclio --help` once its installed
-Build the example by running the following cli command:
-```
-nuclio build example -p .\ --handler Handler
-```
-Advanced build options and package or binary dependencies can be specified in the `build.yaml` file located in the root path of the source code, can see the [examples]() for details or read about the [builder]().
+### Step 2: Build and Execute the Function in Standalone Mode
 
-Run the processor locally, use a browser to access the function at port 8080
+1.  Download the nuclio CLI (**cli.go**) from the [cli packages/]() directory, or build the CLI from the source by running the following command:  
+    ```
+    go install aa\bb
+    ```
 
-```
-docker run -p 8080:8080 example:latest
-```
+    You can find a full CLI guide [here](), or just run `nuclio --help` after installing nuclio.
 
+2.  Build the sample `Handler()` function by running the following CLI command:  
+    ```
+    nuclio build example -p .\ --handler Handler
+    ```
 
-### Execute on a Kubernetes Cluster
+    Advanced build options and package or binary dependencies can be specified in the `build.yaml` file, which is located in the root path of the source code.
+    See the [examples]() for sample uses, or read the [builder documentation]().
 
-#### Prepare the cluster 
-First make sure you have a working kubernetes cluster and kubectl (kubernetes cli).
-Can see a detailed explanation on how to properly install and configure kubernetes and optionally create a local docker image repository in the [following link]().
+3.  Run the processor locally to serve the function. The following command serves the function on port 8080:
+    ```
+    docker run -p 8080:8080 example:latest
+    ```
+    Then, use a browser to access the function on the specified port (8080 in this example).
 
-Verify nuclio controller deployment is running or start it using the following command: 
-```bash
-kubectl create -f http://path/to/controller.yaml
-```
-#### Build or Run the function
-If we plan on creating multiple function instances from the same code we can `build` the function and push the image to a local/remote repository, later on we can create different instances and specify unique parameters and environment variables for every instance using the `run` command flags. Or we can build and run the function in a single `run` command, we will demonstrate the later option.
+### Step 3: Execute the Function on a Kubernetes Cluster
 
+#### Prepare the Cluster
+
+1.  Ensure that you have a working Kubernetes cluster and the Kubernetes CLI (**kubectl**).
+    For a detailed explanation on how to properly install and configure Kubernetes, and optionally create a local Docker image repository, see the [Kubernetes documentation]().
+
+2.  Verify that the nuclio controller deployment is running, or use the following command to start it:  
+    ```bash
+    kubectl create -f http://path/to/controller.yaml
+    ```
+
+#### Build or Run the Function
+
+If you intend to create multiple function instances from the same code, you can use the `build` command to build the function and push the build image to a local or remote repository.
+You can then create different instances of the function, at any time, and specify unique parameters and environment variables for each instance by using the `run` command options.  
+Alternatively, you can build and run the function by using a single `run` command, as demonstrated here:  
 ```
 nuclio run myfunc -p .\ --handler Handler --port 32000 -k kubeconf
 ```
-the `-k` option specify the path to the Kubernetes config file, it can also be specified once using the standard  `KUBECONFIG` environment variable. 
+The `-k` option specifies the path to the Kubernetes configuration file.
+You can also set the Kubernetes `KUBECONFIG` environment variable to this path to avoid having to set it in each execution.
 
-if the function was already built and pushed to the repository we can just specify the function image path with the `-i` option, this will skip the build phase and doesnt require specifing build parameters (path, handler, ..).
+When a function has already been built and pushed to the repository, you can use the `-i` option of the `run` command to set the function's image path.
+Setting this option skips the build phase, thereby eliminating the need to specify any build parameters (such as the path or the name of the handler function).
 
-#### Test the function
-We can verify that our function was created using the `nuclio get` command and invoke the function using the `nuclio exec` command.
+#### Test the Function
 
+Use the nuclio `get` command to verify your function:  
 ```
->nuclio get fu
-  NAMESPACE | NAME  | VERSION |   STATE   |      LOCAL URL      | HOST PORT | REPLICAS
-  default   | hello | latest  | processed | 10.107.164.223:8080 |     31010 | 1/1
-  default   | kuku  | latest  | processed | 10.96.188.133:8080  |     31077 | 1/1
+nuclio get fu
+```
+Following is a sample output for this command:
+```
+  NAMESPACE | NAME    | VERSION |   STATE   |      LOCAL URL      | HOST PORT | REPLICAS
+  default   | hello   | latest  | processed | 10.107.164.223:8080 |     31010 | 1/1
+  default   | myfunc  | latest  | processed | 10.96.188.133:8080  |     31077 | 1/1
 ```
 
+Use the nuclio `exec` command to invoke the function:
 ```
-nuclio exec myfunc -b bodystring 
+nuclio exec myfunc -b bodystring
 ```
 
-**Note:** Since the functions are implemented as a Custom Resource Definition (CRD) in Kubernetes, we can also create a function using the Kubernetes `kubectl` command line utility and APIs, for example `kubectl create -f function.yaml`, we recomend using the CLI since it is more robust and conduct step by step verification. 
+**Note:** Because the functions are implemented as a Custom Resource Definition (CRD) in Kubernetes, you can also create a function using the Kubernetes `kubectl` command-line utility and APIs &mdash; for example, by running `kubectl create -f function.yaml`.
+We recommend using the CLI, as it is more robust and includes step-by-step verification. 
 
-nuclio controller will automatically create the kubernetes function, pods, deployment, service, and optionally pod auto-scaler. we can also view our function status using ```kubectl get functions``` or watch the kubernetes deployments and services with our function name and proper labels.
+The nuclio controller automatically creates the Kubernetes function, pods, deployment, service, and optionally a pod auto-scaler.
+You can also view the status of your function by using <code>kubectl&nbsp;get&nbsp;functions</code>, or watch the Kubernetes deployments and services with your function name and proper labels.
 
-to access the function we can HTTP to the exposed local or remote function service port (external ports are secified with the `--port` cli option).
->**Note:** if we want to create a custom API url to our function we can use kubernetes [ingress]() resources, in future version this task will be automated  
+To access the function, you can send HTTP requests to the exposed local or remote function service port.
+(External ports are specified with the `--port` CLI option.)
 
-#### Function versioning 
+**Note:** If you want to assign a custom API URL to your function, you can use the Kubernetes [ingress resources](https://kubernetes.io/docs/concepts/services-networking/ingress/).
+In future versions of nuclio, this task will be automated.
 
-By default functions are tagged with version `latest`, versions can be published and assigned aliases (e.g. production, beta, ..)
-older versions can be viewed in the CLI and can be managed independently. older versions are immutable and cannot be modified.
+## Function Versioning 
 
-to publish a function and tag it with an alias use:
-``` nuclio update myfunc --publish --alias prod```
+By default, functions are tagged with version `latest`.  
+Versions can be published and assigned aliases (for example, "production" or "beta").  
+Earlier versions can be viewed in the CLI, and can be managed independently. Earlier versions are immutable and cannot be modified.
 
-#### Using the function.yaml file
-Like other kubernetes resources the functions can be specified or retrived using yaml or json files, it allows granular and reusable specification of function parameters, events and data bindings. you can see details in the [function spec documentation]().  
+To publish a function and tag it with an alias, use the nuclio `update` command with the `--publish` and `--alias` options, as demonstrated in the following example:  
+```
+nuclio update myfunc --publish --alias prod
+```
 
-A function yaml can look like:
+## Function Configuration Files
 
+Like other Kubernetes resources, a function can be defined or retrieved by using a YAML or JSON function configuration file.
+This allows granular and reusable specification of function parameters, events, and data bindings.
+For more details, see the [function-specification documentation]().
+
+Following is a sample function YAML configuration file:  
 ```yaml
 apiVersion: "nuclio.io/v1"
 kind: Function
@@ -146,19 +235,25 @@ spec:
   - name: SOME_ENV
     value: abc
 ```
-You can create functions from the yaml/json files by specifing the `-f` option in the `run` or `build` cli commands, you can also use the yaml/json file as a template and override each one of the parameters with command line arguments. 
-In the following example we create a function from a template file and override the name and one environment variable:  
+
+You can create functions from the YAML or JSON configuration file by specifying the `-f` option in the `run` or `build` CLI commands.
+You can also use the configuration file as a template, and override specific parameters with command-line arguments.
+The following example uses a **function.yaml** template configuration file to create a function, and explicitly sets the function name and the value of one of the environment variables (overriding the template definitions):  
 ```
 nuclio run myfunc -f function.yaml -e ENV_PARAM=somevalue
 ```
-and can retrive the full function spec and status using: 
+
+The following command creates a YAML file with the full function specification and status:  
 ```
 nuclio get myfunc -o yaml
 ```
 
-## To start developing nuclio
+## Developing nuclio
 
-TBD how to clone the repo, build and develop basics 
+**TBD** How to clone the repo, build the code, and development basics.
 
-## Support 
-can check out our [FAQ]() or post questions to nuclio [slack channel]()  
+
+## Support
+
+Check out the nuclio [FAQ](), or post questions on the [#nuclio Slack channel]().
+
