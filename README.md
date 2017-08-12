@@ -54,8 +54,8 @@ We hope many will join us in developing new modules and integrations with more e
 
 <dl>
   <dt>Event Sources</dt>
-  <dd>Functions can be invoked through a variety of event sources (such as HTTP, RabitMQ, Kafka, Kinesis, DynamoDB, iguazio v3io, or schedule), which are defined in the function specification.  
-      Event sources are divided into several event classes (req/rep, async, stream, pooling), which define the sources' behavior.  
+  <dd>Functions can be invoked through a variety of event sources (such as HTTP, RabitMQ, Kafka, Kinesis, DynamoDB, iguazio v3io, or schedule), which are defined in the function specification.<br />
+      Event sources are divided into several event classes (req/rep, async, stream, pooling), which define the sources' behavior.<br />
       Different event sources can plug seamlessly into the same function without sacrificing performance, allowing for portability, code reuse, and flexibility.
   </dd>
 </dl>
@@ -64,15 +64,15 @@ We hope many will join us in developing new modules and integrations with more e
   <dt>Data Bindings</dt>
   <dd>Data-binding rules allow users to specify persistent input/output data resources to be used by the function.
       (Data connections are preserved between executions.)
-      Bound data can be in the form of files, objects, records, messages etc.  
-      The function specification may include an array of data-binding rules, each specifying the data resource and its credentials and usage parameters.  
+      Bound data can be in the form of files, objects, records, messages etc.<br />
+      The function specification may include an array of data-binding rules, each specifying the data resource and its credentials and usage parameters.<br />
       Data-binding abstraction allows using the same function with different data sources of the same type, and enables function portability.
   </dd>
 </dl>
 
 <dl>
   <dt>Builder</dt>
-  <dd>A builder receives raw code and optional build instructions and dependencies, and generates the function artifact &mdash; a binary file or a Docker container image, which the builder can also push to a specified image repository.  
+  <dd>A builder receives raw code and optional build instructions and dependencies, and generates the function artifact &mdash; a binary file or a Docker container image, which the builder can also push to a specified image repository.<br />
       The builder can run in the context of the CLI or as a separate service for automated development pipelines.
   </dd>
 </dl>
