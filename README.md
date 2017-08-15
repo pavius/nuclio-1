@@ -9,8 +9,7 @@ nuclio is being extended to support a large variety of event and data sources.
 You can use nuclio as a standalone binary (for example, for IoT devices), package it within a Docker container, or integrate it with a container orchestrator like Kubernetes.
 
 nuclio is extremely fast. A single function instance can process hundreds of thousands of HTTP requests or data records per second.
-This is 10&ndash;100 times faster than other frameworks.
-For more information, see the nuclio [benchmarks](vendor/github.com/pavius/zap/benchmarks).
+This is 10&ndash;100 times faster than some other frameworks.
 
 **Note:** nuclio is still under development, and is not recommended for production use.
 
