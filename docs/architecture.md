@@ -11,7 +11,7 @@ Processor containers can run as standalone Docker containers, or on top of a con
 
 nuclio's unique processor architecture is aimed at maximizing function performance and providing abstractions and portability across a wide set of platforms, event sources, and data services. 
 
-![function processor](docs/images/function-processor.png)
+![function processor](images/function-processor.png)
 
 The processor has four main components:
 
