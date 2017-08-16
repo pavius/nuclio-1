@@ -9,7 +9,7 @@ nuclio is being extended to support a large variety of event and data sources.
 You can use nuclio as a standalone binary (for example, for IoT devices), package it within a Docker container, or integrate it with a container orchestrator like Kubernetes.
 
 nuclio is extremely fast. A single function instance can process hundreds of thousands of HTTP requests or data records per second.
-This is 10&ndash;100 times faster than some other frameworks.
+This is 10&ndash;100 times faster than some other frameworks. See [Architecture Details](docs/architecture.md) to learn how it works.
 
 **Note:** nuclio is still under development, and is not recommended for production use.
 
@@ -18,7 +18,7 @@ This is 10&ndash;100 times faster than some other frameworks.
 - [nuclio High-Level Architecture](#nuclio-high-level-architecture)
 - [Getting Started Example](#getting-started-example)
 - [Function Versioning](#function-versioning)
-- [Function Configuration Files](#function-configuration-files)
+- [Function Configuration and Metadata](#function-configuration-and-metadata)
 - [Developing nuclio](#developing-nuclio)
 - [Support](#support)
 
@@ -30,7 +30,7 @@ We considered existing cloud and open-source serverless solutions, but none addr
 -  Real-time processing with minimal CPU and I/O overhead and maximum parallelism
 -  Native integration with a large variety of data and event sources, and processing models
 
--  Abstraction of data resources from the function code, to support code re-use, simplicity, portability, and data-path acceleration
+-  Abstraction of data resources from the function code, to support code portability, simplicity, and data-path acceleration
 -  Simple debugging, regression testing, and multi-versioned CI/CD pipelines
 -  Portability across low-power devices, laptops, on-prem clusters, and public clouds
 
@@ -43,7 +43,7 @@ We hope many will join us in developing new modules and integrations with more e
 ![architecture](docs/images/architecture.png)
 
 <dl>
-  <dt>Processors</dt>
+  <dt>Function Processors</dt>
   <dd>A processor listens on one or more event sources (for example, HTTP, Message Queue, Stream), and executes user functions with one or more parallel workers.
       The workers use language-specific runtimes to execute the function (via native calls, SHMEM, or shell).
       Processors use abstract interfaces to integrate with platform facilities for logging, monitoring, and configuration, allowing for greater portability and extensibility (such as logging to a screen, file, or log stream).
@@ -94,7 +94,7 @@ We hope many will join us in developing new modules and integrations with more e
   </dd>
 </dl>
 
-For more information about the nuclio architecture, see [Architecture]().
+For more information about the nuclio architecture, see [Architecture](docs/architecture.md).
 
 
 ## Getting-Started Example
@@ -110,11 +110,10 @@ Download the nuclio Go SDK (**nuclio-sdk**) by running the following command:
 ```
 go get -d github.com/nuclio/nuclio-sdk/...
 ```
-<!-- TODO: Verify that "..." is part of the command syntax and not a placeholder. -->
 
 #### Download or Build the nuclio CLI
 
-Download the nuclio CLI (**cli.go**) from the [cli packages/]() directory, or build the CLI from the source by running the following command:  
+Download the nuclio CLI binary from the [cli packages/]() directory, or build the CLI from the source by running the following command:  
 ```
 go install aa\bb
 ```
@@ -124,7 +123,20 @@ You can find a full CLI guide [here](), or just run `nuclio --help` after instal
 
 ### Create a New Function
 
-Create an **example.go** file, add code to import the nuclio SDK, and define a simple `Handler()` function that uses the SDK, as demonstrated below:  
+Create an **example.go** file, add code to import the nuclio SDK, and define a simple `Handler()` function that uses the SDK, below you can see a simple function which returns the text "Hello, World":  
+```golang
+package handler
+
+import (
+    "github.com/nuclio/nuclio-sdk"
+)
+
+func Handler(context *nuclio.Context, event nuclio.Event) (interface{}, error) {
+    return "Hello, World", nil
+}
+```
+A more advanced function example below use the `Event` and `Context` interfaces to handle inputs and logs, and return a structured HTTP result instead of simple text string, this can allow you more granular control over the output. 
+
 ```golang
 package handler
 
@@ -151,7 +163,7 @@ Use any of the supported methods to build and execute your function:
 
 1.  Build the sample `Handler()` function by running the following CLI command:  
     ```
-    nuclio build example -p .\ --handler Handler
+    nuclio build example -p .\ 
     ```
 
     Advanced build options and package or binary dependencies can be specified in the `build.yaml` file, which is located in the root path of the source code.
@@ -182,11 +194,9 @@ Use any of the supported methods to build and execute your function:
     You can then create different instances of the function, at any time, and specify unique parameters and environment variables for each instance by using the `run` command options.  
     Alternatively, you can build and run the function by using a single `run` command, as demonstrated here:  
     ```
-    nuclio run myfunc -p .\ --handler Handler --port 32000 -k kubeconf
+    nuclio run myfunc -p .\ 
     ```
-    The `-k` option specifies the path to the Kubernetes configuration file.
-    You can also set the Kubernetes `KUBECONFIG` environment variable to this path to avoid having to set it in each execution.
-
+    For the CLI to connect to the Kubernetes cluster we need to have a Kubernetes configuration file in the default path (~/.kube/config) or set the `KUBECONFIG` environment variable to the right file path. You can also use the CLI `-k` option to point to the Kubernetes configuration file or override the default. 
     When a function has already been built and pushed to the repository, you can use the `-i` option of the `run` command to set the function's image path.
     Setting this option skips the build phase, thereby eliminating the need to specify any build parameters (such as the path or the name of the handler function).
 
@@ -198,14 +208,14 @@ Use any of the supported methods to build and execute your function:
     ```
     Following is a sample output for this command:
     ```
-      NAMESPACE | NAME    | VERSION |   STATE   |      LOCAL URL      | HOST PORT | REPLICAS
+      NAMESPACE | NAME    | VERSION |   STATE   |      LOCAL URL      | NODE PORT | REPLICAS
       default   | hello   | latest  | processed | 10.107.164.223:8080 |     31010 | 1/1
       default   | myfunc  | latest  | processed | 10.96.188.133:8080  |     31077 | 1/1
     ```
 
     Use the nuclio `exec` command to invoke the function:
     ```
-    nuclio exec myfunc -b bodystring
+    nuclio exec myfunc 
     ```
 
     **Note:** Because the functions are implemented as a Custom Resource Definition (CRD) in Kubernetes, you can also create a function using the Kubernetes `kubectl` command-line utility and APIs &mdash; for example, by running `kubectl create -f function.yaml`.
@@ -214,8 +224,8 @@ Use any of the supported methods to build and execute your function:
     The nuclio controller automatically creates the Kubernetes function, pods, deployment, service, and optionally a pod auto-scaler.
     You can also view the status of your function by using <code>kubectl&nbsp;get&nbsp;functions</code>, or watch the Kubernetes deployments and services with your function name and proper labels.
 
-    To access the function, you can send HTTP requests to the exposed local or remote function service port.
-    (External ports are specified with the `--port` CLI option.)
+    To access the function, you can send HTTP requests to the exposed local or remote function service port (node port).
+    (Specific external ports can be specified with the `--port` CLI option.)
 
     **Note:** If you want to assign a custom API URL to your function, you can use the Kubernetes [ingress resources](https://kubernetes.io/docs/concepts/services-networking/ingress/).
     In future versions of nuclio, this task will be automated.
@@ -233,10 +243,10 @@ nuclio update myfunc --publish --alias prod
 ```
 
 
-## Function Configuration Files
+## Function Configuration and Metadata
 
 Like other Kubernetes resources, a function can be defined or retrieved by using a YAML or JSON function configuration file.
-This allows granular and reusable specification of function parameters, events, and data bindings.
+This allows granular and reusable specification of function resources, parameters, events, and data bindings.
 For more details, see the [function-specification documentation]().
 
 Following is a sample function YAML configuration file:  
@@ -248,7 +258,6 @@ metadata:
 spec:
   image: example:latest
   replicas: 1
-  httpPort: 31000
   env:
   - name: SOME_ENV
     value: abc
@@ -261,7 +270,7 @@ The following example uses a **function.yaml** template configuration file to cr
 nuclio run myfunc -f function.yaml -e ENV_PARAM=somevalue
 ```
 
-The following command creates a YAML file with the full function specification and status:  
+The following command returns a YAML file with the full function specification and status:  
 ```
 nuclio get myfunc -o yaml
 ```
