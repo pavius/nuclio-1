@@ -40,7 +40,7 @@ We hope many will join us in developing new modules and integrations with more e
 
 ## nuclio High-Level Architecture
 
-![architecture](docs/architecture.png)
+![architecture](docs/images/architecture.png)
 
 <dl>
   <dt>Processors</dt>
