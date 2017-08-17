@@ -15,18 +15,22 @@ spec:
   image: example:latest
 ```
 
+## Metadata 
+
 The **metadata** section include the following attributes:
  - **name** - name of the function 
  - **namespace** - the kubernetes namespace (can be viewed as an independent project)
  - **labels** - a list of key/value tags used for looking up the function, note that "function name", "version", and "alias" are reserved and filled automatically by the controller
  - **annotations** - list of key/value based annotations 
 
+## Requierment Spec
+
 The **spec** secion contains the requierments and attributes and has the following elements:
 
  - **description** (string) - free description of the function 
  - **handler** (string) - the name of the function handler call (nuclio will try to auto detect that)
  - **runtime** (string) - name of the language runtime (nuclio will try to auto detect that)
- - **code** - a structure containing the the source code or its location of and access credentials 
+ - **code** - a structure containing the source code or its location of and access credentials 
  - **image** (string) - full path to the function artifact (container image), note you can either specify the code or the already built image but not both.
  - **env** - a name/value environment variable tuple, it is also possible to point to secrets as described in the following example 
  - **resources** - specify the requested and limit of CPU and Memory resource (similar to Kubernetes pod resources definition)
@@ -40,7 +44,8 @@ The **spec** secion contains the requierments and attributes and has the followi
 
 when creating a function using the CLI **run** command each one of the properties above can be specified or overritten using a command line argument, type `nuctl run --help` for details.
 
-Example of a detailed YAML file:
+## Complete Example (YAML)
+
 ```yaml
 apiVersion: "nuclio.io/v1"
 kind: Function
@@ -70,7 +75,13 @@ spec:
       cpu: "500m"
 ```
 
-the example above demonstrate how we can use kubernetes namespaces, specify labels, use environment vaiables and secrets, and specify exact memory and cpu resources. For the example to work the kubernetes namespace `myproject` and the secret `my-secret` must be defined ahead of time.
+the example above demonstrates how we can use Kubernetes namespaces, specify labels, use environment variables and secrets, and specify exact memory and cpu resources. For the example to work the Kubernetes namespace `myproject` and the secret `my-secret` must be defined ahead of time.
 
-**Note:** when specifing labels you can list functions based on a specific lable selector (using `nuctl get fu -l <selector> `) or see all the lables per function in the wide view (using `nuctl get fu -o wide `)
+**Note:** when specifying labels you can list functions based on a specific label selector (using `nuctl get fu -l <selector> `) or see all the labels per function in the wide view (using `nuctl get fu -o wide `)
+
+## Function Templates and Reuse 
+
+Users can create a single function YAML file and create multiple functions from it each with different parameters by simply overriding the specific property using a command line flag (e.g. override environment variables).
+
+instead of building the function code for every function instance we can build it once (using the cli `nuctl build` command), it will generate an artifact in a local or remote image repository, and we can use that artifact in multiple deployments and in different clusters (when using a shared repository). 
 
