@@ -34,7 +34,8 @@ The **spec** secion contains the requierments and attributes and has the followi
  - **minReplicas** (int) - minimum number of replicas 
  - **maxReplicas** (int) - maximum number of replicas 
  - **dataBindings** - describe a list of data resources used by the function 
-
+ - **disable** (boolean) - can be set to True to disable a function
+ 
 **Note:** other fields are not fully supported yet, and will be documented when they will be completed.
 
 when creating a function using the CLI **run** command each one of the properties above can be specified or overritten using a command line argument, type `nuctl run --help` for details.
